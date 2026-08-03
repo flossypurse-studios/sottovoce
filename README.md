@@ -12,10 +12,8 @@ How it stays quiet:
 
 ## Install
 
-Not on npm yet — until the first release, install straight from GitHub:
-
 ```sh
-npm install --save-dev github:flossypurse-studios/sottovoce
+npm install --save-dev sottovoce
 ```
 
 Requires Node 20+ and git on PATH.
