@@ -42,3 +42,25 @@ test("rejects malformed directives", () => {
   assert.throws(() => parseDirectiveBody("ts:app.ts lines=9-4", 1));
   assert.throws(() => parseDirectiveBody("ts:app.ts wat=1", 1));
 });
+
+test("rejects lines= combined with a region selector", () => {
+  assert.throws(
+    () => parseDirectiveBody("ts:app.ts#setup lines=2-4", 1),
+    /cannot be combined/,
+  );
+});
+
+test("space in a region name points at the real constraint", () => {
+  assert.throws(
+    () => parseDirectiveBody("ts:app.ts#my region", 1),
+    /cannot contain spaces/,
+  );
+});
+
+test("malformed directive with huge trailing spaces fails fast", () => {
+  const line = "<!-- sotto ts:x " + " ".repeat(100000);
+  const start = process.hrtime.bigint();
+  assert.equal(matchDirective(line, 1), null);
+  const ms = Number(process.hrtime.bigint() - start) / 1e6;
+  assert.ok(ms < 100, `directive regex took ${ms}ms`);
+});

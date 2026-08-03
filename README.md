@@ -12,21 +12,22 @@ How it stays quiet:
 
 ## Install
 
+Not on npm yet — until the first release, install straight from GitHub:
+
 ```sh
-npm install --save-dev sottovoce
+npm install --save-dev github:flossypurse-studios/sottovoce
 ```
 
 Requires Node 20+ and git on PATH.
 
 ## Quickstart
 
-Add `sottovoce.json` to your docs repo:
+Everything here runs locally — no GitHub org, no credentials. Add `sottovoce.json` to your docs repo, pointing a source at a directory of example code:
 
 ```json
 {
   "docs": ["docs/**/*.{md,mdx}"],
   "sources": {
-    "ts": { "repo": "your-org/examples-ts", "ref": "v1.4.0" },
     "local": { "path": "../examples" }
   }
 }
@@ -35,10 +36,10 @@ Add `sottovoce.json` to your docs repo:
 Reference a snippet in any markdown or MDX file — a directive comment followed by a code fence:
 
 ```markdown
-<!-- sotto ts:src/checkout.ts#purchase -->
+<!-- sotto local:src/checkout.ts#purchase -->
 ```
 
-In MDX, use `{/* sotto ts:src/checkout.ts#purchase */}`.
+In MDX, use `{/* sotto local:src/checkout.ts#purchase */}`.
 
 Then run:
 
@@ -55,7 +56,7 @@ The directive form is `<source>:<path>[#region] [options]`.
 A **whole file** needs nothing in the source:
 
 ```markdown
-<!-- sotto ts:src/worker.ts -->
+<!-- sotto local:src/worker.ts -->
 ```
 
 A **named region** uses editor-native fold markers in the source file:
@@ -67,18 +68,18 @@ const receipt = await checkout(cart);
 ```
 
 ```markdown
-<!-- sotto ts:src/checkout.ts#purchase -->
+<!-- sotto local:src/checkout.ts#purchase -->
 ```
 
-Any common comment leader works (`//`, `#`, `--`, `;`, `'`, `%`, `/* */`, `<!-- -->`), plus bare `#region` for C#. Regions can nest; inner markers are stripped from output. A **line range** is the escape hatch for code you can't annotate:
+Any common comment leader works (`//`, `#`, `--`, `;`, `'`, `%`, `/* */`, `<!-- -->`), plus bare `#region` for C#. Regions can nest. Marker lines never appear in output — they are stripped from every extraction mode, including whole-file, so don't put meaning in them. A **line range** is the escape hatch for code you can't annotate (fragile by nature — an upstream edit shifts the lines, so prefer regions in files you control):
 
 ```markdown
-<!-- sotto ts:package.json lines=1-5 -->
+<!-- sotto local:package.json lines=1-5 -->
 ```
 
-Options: `lines=A-B` and `lang=x` (fence language override — otherwise inferred from the file extension). If your fence already carries an info string (`ts {3-5} title="checkout.ts"`), sottovoce preserves it.
+Options: `lines=A-B` (or `lines=N` for a single line) and `lang=x`. Combining `lines=` with a `#region` selector is an error. The fence language is inferred from the file extension; `lang=x` replaces it, and if your fence carries extra metadata (`ts {3-5} title="checkout.ts"`), everything after the language token is preserved.
 
-Snippets are dedented to their shallowest line, blank edges are trimmed, and fences widen automatically when a snippet contains backtick runs. Snippets inside lists inherit the fence's indentation.
+Snippets are dedented to their shallowest line, blank edges are trimmed, and fences widen automatically when a snippet contains backtick runs. Tilde fences work too. Snippets inside lists inherit the fence's indentation.
 
 ## Sources
 
@@ -91,7 +92,7 @@ Each named source is either a GitHub repo pinned to a ref, or a local path:
 }
 ```
 
-Pin `ref` to the release tag your docs describe — that's what keeps a docs version honest. Branches, tags, and full commit SHAs all work. Repos are shallow-fetched into `~/.cache/sottovoce/`; `--offline` reuses the cache without touching the network. Private repos work through your ambient git credentials.
+Pin `ref` to the release tag your docs describe — that's what keeps a docs version honest. Branches, tags, and full commit SHAs all work; if omitted, `ref` defaults to `main`. Only GitHub repos are supported as remote sources — for anything else, clone it yourself and use a `path` source. Repos are shallow-fetched into `~/.cache/sottovoce/` (respects `$XDG_CACHE_HOME`); `--offline` reuses the cache without touching the network. Private repos work through your ambient git credentials.
 
 ## CI: the drift alarm
 
@@ -99,11 +100,13 @@ Pin `ref` to the release tag your docs describe — that's what keeps a docs ver
 npx sottovoce check
 ```
 
-Exits non-zero if any fence is stale or any directive is broken (missing file, missing region, unknown source), printing each problem with its file and line. Wire it into the docs repo's CI and snippet drift becomes a failing build instead of a silent lie:
+Exits non-zero if any fence is stale or any directive is broken (missing file, missing region, unknown source). Stale fences print as `drift: docs/guide.md:12`, broken directives as `docs/guide.md:12: <directive>: <what's wrong>` — both point at the directive line. Wire it into the docs repo's CI and snippet drift becomes a failing build instead of a silent lie:
 
 ```yaml
 - run: npx sottovoce check
 ```
+
+`sync` also exits non-zero when it hits a broken directive, even after writing every valid fence — so a CI job that syncs and commits won't quietly commit around a broken reference.
 
 Broken directives never destroy content — the existing fence is left untouched and the problem is reported.
 

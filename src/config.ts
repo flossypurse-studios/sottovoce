@@ -69,6 +69,11 @@ export function loadConfig(file: string): LoadedConfig {
       );
     }
     if (hasRepo) {
+      if (!/^[\w.-]+\/[\w.-]+$/.test(s.repo as string)) {
+        throw new ConfigError(
+          `${file}: source "${name}": repo must be "owner/name", got "${s.repo}"`,
+        );
+      }
       if (s.ref !== undefined) {
         // The ref is handed to `git fetch` as an argument — refuse anything
         // that could be parsed as a flag.

@@ -44,6 +44,8 @@ export interface FileResult {
   file: string;
   updated: number;
   unchanged: number;
+  /** Directive lines (1-based) whose fences were rewritten or inserted. */
+  updatedLines: number[];
   problems: SnippetProblem[];
   /** New file content, if any fence changed. */
   content?: string;

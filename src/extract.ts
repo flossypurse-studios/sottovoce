@@ -55,6 +55,9 @@ export function extractLines(
   range: { start: number; end: number },
 ): string[] {
   const lines = sourceText.split(/\r?\n/);
+  // Drop the phantom element a trailing newline produces, so lines=N+1 on an
+  // N-line file is out of range rather than an empty snippet.
+  if (lines.length && lines[lines.length - 1] === "") lines.pop();
   if (range.end > lines.length) {
     throw new ExtractError(
       `lines=${range.start}-${range.end} out of range (file has ${lines.length} lines)`,

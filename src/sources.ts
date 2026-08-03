@@ -1,5 +1,11 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  statSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import type { SourceSpec } from "./types.js";
@@ -53,9 +59,11 @@ export function resolveSource(
   }
   const ref = spec.ref ?? "main";
   const cacheRoot = opts.cacheDir ?? defaultCacheDir();
+  // encodeURIComponent is injective — distinct refs can never collide into
+  // the same cache directory.
   const dir = path.join(
     cacheRoot,
-    `${spec.repo.replace("/", "__")}@${ref.replace(/[^\w.-]/g, "_")}`,
+    `${spec.repo.replace("/", "__")}@${encodeURIComponent(ref)}`,
   );
 
   if (opts.offline) {
@@ -99,5 +107,13 @@ export function readSourceFile(sourceDir: string, relPath: string): string {
   if (!existsSync(abs) || !statSync(abs).isFile()) {
     throw new SourceError(`file not found: ${relPath}`);
   }
-  return readFileSync(abs, "utf8");
+  // The lexical check above doesn't follow symlinks — resolve both sides so a
+  // link inside the source root can't pull in files from outside it.
+  const realRoot = realpathSync(sourceDir);
+  const realAbs = realpathSync(abs);
+  const realRel = path.relative(realRoot, realAbs);
+  if (realRel.startsWith("..") || path.isAbsolute(realRel)) {
+    throw new SourceError(`path escapes source root via symlink: ${relPath}`);
+  }
+  return readFileSync(realAbs, "utf8");
 }

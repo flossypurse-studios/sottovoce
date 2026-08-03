@@ -73,7 +73,18 @@ export async function runSync(
     files.push(result);
     if (result.content !== undefined) {
       changedFiles.push(rel);
-      if (!opts.check) writeFileSync(abs, result.content);
+      if (!opts.check) {
+        try {
+          writeFileSync(abs, result.content);
+        } catch (err) {
+          // Keep going — one unwritable file must not abandon the rest.
+          result.problems.push({
+            file: rel,
+            line: 0,
+            message: `could not write file: ${(err as Error).message}`,
+          });
+        }
+      }
     }
   }
 

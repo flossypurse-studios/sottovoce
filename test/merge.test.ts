@@ -169,3 +169,77 @@ test("handles CRLF docs and keeps them CRLF", () => {
   assert.equal(second.content, undefined);
   assert.equal(second.unchanged, 1);
 });
+
+test("empty snippet reports a problem and preserves the fence", () => {
+  const cases = [
+    ["empty.ts", ""],
+    ["markers.ts", "// #region empty\n// #endregion\n"],
+  ] as const;
+  for (const [file, source] of cases) {
+    const doc = [`<!-- sotto ts:${file} -->`, "```ts", "keep me", "```", ""].join("\n");
+    const result = mergeDoc("doc.md", doc, () => source);
+    assert.equal(result.content, undefined, file);
+    assert.equal(result.updated, 0, file);
+    assert.match(result.problems[0]!.message, /snippet is empty/);
+  }
+});
+
+test("a fence missing its close does not swallow the next directive", () => {
+  const doc = [
+    "<!-- sotto ts:hello.ts#hello -->",
+    "```ts",
+    "stale foo",
+    "",
+    "<!-- sotto ts:hello.ts#hello -->",
+    "```ts",
+    "stale bar",
+    "```",
+    "",
+  ].join("\n");
+  const result = mergeDoc("doc.md", doc, reader);
+  assert.match(result.problems[0]!.message, /unclosed code fence/);
+  // Everything after the broken open is fence content per CommonMark — the
+  // whole span is preserved byte-for-byte and the problem fails the run.
+  assert.equal(result.content, undefined);
+  assert.equal(result.updated, 0);
+});
+
+test("lang= overrides the fence language token but keeps the metadata tail", () => {
+  const doc = [
+    "<!-- sotto ts:hello.ts#hello lang=typescript -->",
+    '```ts {2} title="hello.ts"',
+    "```",
+    "",
+  ].join("\n");
+  const result = mergeDoc("doc.md", doc, reader);
+  assert.ok(result.content?.includes('```typescript {2} title="hello.ts"'));
+});
+
+test("handles six-figure-line snippets without a stack overflow", () => {
+  const big = Array.from({ length: 150000 }, (_, i) => `const x${i} = ${i};`).join("\n");
+  const doc = ["<!-- sotto ts:big.ts -->", "```ts", "```", ""].join("\n");
+  const result = mergeDoc("doc.md", doc, () => big);
+  assert.equal(result.updated, 1);
+  assert.ok(result.content!.length > big.length);
+});
+
+test("records directive lines for rewritten fences", () => {
+  const doc = [
+    "# Title",
+    "",
+    "<!-- sotto ts:hello.ts#hello -->",
+    "```ts",
+    "stale",
+    "```",
+    "",
+  ].join("\n");
+  const result = mergeDoc("doc.md", doc, reader);
+  assert.deepEqual(result.updatedLines, [3]);
+});
+
+test("directives with trailing spaces inside the comment still parse", () => {
+  const doc = ["<!-- sotto ts:hello.ts#hello    -->", "```ts", "```", ""].join("\n");
+  const result = mergeDoc("doc.md", doc, reader);
+  assert.equal(result.updated, 1);
+  assert.deepEqual(result.problems, []);
+});

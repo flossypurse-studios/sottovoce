@@ -76,3 +76,12 @@ test("infers fence language from extension", () => {
   assert.equal(inferLang("Dockerfile"), "dockerfile");
   assert.equal(inferLang("noext"), "");
 });
+
+test("trailing newline does not create a phantom extractable line", () => {
+  assert.throws(
+    () => extractLines("a\nb\nc\n", { start: 4, end: 4 }),
+    /file has 3 lines/,
+  );
+  assert.deepEqual(extractLines("a\nb\nc\n", { start: 3, end: 3 }), ["c"]);
+  assert.deepEqual(extractLines("a\nb\nc", { start: 3, end: 3 }), ["c"]);
+});

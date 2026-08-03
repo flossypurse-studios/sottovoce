@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -115,4 +115,36 @@ test("rejects refs that could be parsed as git flags", () => {
     () => loadConfig(path.join(docsRepo, "sottovoce.json")),
     /"ref" must be a branch, tag, or commit/,
   );
+});
+
+test("symlinks cannot pull files from outside the source root", async () => {
+  const { root, docsRepo } = makeFixture();
+  writeFileSync(path.join(root, "outside.txt"), "SECRET\n");
+  symlinkSync(
+    path.join(root, "outside.txt"),
+    path.join(root, "examples", "src", "link.txt"),
+  );
+  writeFileSync(
+    path.join(docsRepo, "docs", "leak.md"),
+    ["<!-- sotto ts:src/link.txt -->", "```", "keep", "```", ""].join("\n"),
+  );
+  const loaded = loadConfig(path.join(docsRepo, "sottovoce.json"));
+  const summary = await runSync(loaded, { check: true });
+  assert.ok(summary.problems.some((p) => /symlink/.test(p.message)));
+  const leak = readFileSync(path.join(docsRepo, "docs", "leak.md"), "utf8");
+  assert.ok(!leak.includes("SECRET"));
+});
+
+test("an unwritable file is reported and does not abandon later files", async () => {
+  const { docsRepo } = makeFixture();
+  writeFileSync(
+    path.join(docsRepo, "docs", "aaa.md"),
+    ["<!-- sotto ts:src/retry.ts#retry -->", "```ts", "```", ""].join("\n"),
+  );
+  chmodSync(path.join(docsRepo, "docs", "aaa.md"), 0o444);
+  const loaded = loadConfig(path.join(docsRepo, "sottovoce.json"));
+  const summary = await runSync(loaded);
+  assert.ok(summary.problems.some((p) => /could not write/.test(p.message)));
+  const guide = readFileSync(path.join(docsRepo, "docs", "guide.md"), "utf8");
+  assert.ok(guide.includes("ctx.run(flakyCall"));
 });

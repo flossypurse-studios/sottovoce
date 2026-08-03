@@ -1,17 +1,26 @@
 #!/usr/bin/env node
+import { createRequire } from "node:module";
 import { findConfig, loadConfig } from "./config.js";
 import { runSync } from "./run.js";
+
+const pkg = createRequire(import.meta.url)("../package.json") as {
+  version: string;
+};
 
 const HELP = `sottovoce — sync real, tested code from source repos into your docs, quietly.
 
 Usage:
-  sottovoce sync [options]    extract snippets and rewrite docs code fences
+  sottovoce sync [options]    extract snippets and rewrite docs code fences (default command)
   sottovoce check [options]   like sync, but write nothing; exit 1 on drift
+
+Both commands exit 1 when any directive is broken (missing file, missing
+region, unknown source).
 
 Options:
   --config <file>   path to sottovoce.json (default: nearest, walking up from cwd)
   --offline         use cached repo clones, no network
   --check           same as the check command
+  --version         print the sottovoce version
   --help            show this help
 
 Docs reference snippets with a single comment directive followed by a code fence:
@@ -43,9 +52,17 @@ async function main(): Promise<void> {
     if (arg === "--help" || arg === "-h") {
       console.log(HELP);
       return;
+    } else if (arg === "--version" || arg === "-v") {
+      console.log(pkg.version);
+      return;
     } else if (arg === "--config") {
       configPath = args[++i];
-      if (!configPath) fail("--config needs a value");
+      if (!configPath || configPath.startsWith("-")) {
+        fail(`--config expects a file path${configPath ? `, got "${configPath}"` : ""}`);
+      }
+    } else if (arg.startsWith("--config=")) {
+      configPath = arg.slice("--config=".length);
+      if (!configPath) fail("--config expects a file path");
     } else if (arg === "--offline") {
       offline = true;
     } else if (arg === "--check") {
@@ -70,18 +87,28 @@ async function main(): Promise<void> {
   const summary = await runSync(loaded, { check, offline });
 
   for (const p of summary.problems) {
-    console.error(`${p.file}:${p.line}: ${p.message}`);
+    console.error(`${p.file}${p.line > 0 ? `:${p.line}` : ""}: ${p.message}`);
   }
 
   const scanned = summary.files.length;
+  if (scanned === 0) {
+    console.error("sottovoce: warning: docs globs matched no files");
+  }
+  const changed = summary.files.filter((f) =>
+    summary.changedFiles.includes(f.file),
+  );
   if (check) {
-    for (const f of summary.changedFiles) console.log(`drift: ${f}`);
+    for (const f of changed) {
+      if (f.updatedLines.length === 0) console.log(`drift: ${f.file}`);
+      for (const line of f.updatedLines) console.log(`drift: ${f.file}:${line}`);
+    }
     console.log(
       `checked ${scanned} file${scanned === 1 ? "" : "s"}: ` +
         `${summary.unchanged} in sync, ${summary.updated} stale`,
     );
     if (summary.problems.length || summary.changedFiles.length) process.exit(1);
   } else {
+    for (const f of changed) console.log(`wrote ${f.file}`);
     console.log(
       `synced ${scanned} file${scanned === 1 ? "" : "s"}: ` +
         `${summary.updated} updated, ${summary.unchanged} unchanged` +

@@ -1,4 +1,4 @@
-import { matchDirective } from "./directive.js";
+import { isDirectiveLine, matchDirective } from "./directive.js";
 import {
   ExtractError,
   extractLines,
@@ -31,6 +31,9 @@ function findFence(lines: string[], from: number): Fence | null | "unclosed" {
   const char = marker[0] ?? "`";
   const closeRe = new RegExp(`^\\s*${char === "`" ? "`" : "~"}{${marker.length},}\\s*$`);
   for (let j = i + 1; j < lines.length; j++) {
+    // A directive line before the close marker means this fence never closed —
+    // scanning past it would swallow the next directive's fence.
+    if (isDirectiveLine(lines[j] ?? "")) return "unclosed";
     if (closeRe.test(lines[j] ?? "")) {
       return { openIndex: i, closeIndex: j, indent, char, info: (open[3] ?? "").trim() };
     }
@@ -78,6 +81,7 @@ export function mergeDoc(
 
   const out: string[] = [];
   const problems: SnippetProblem[] = [];
+  const updatedLines: number[] = [];
   let updated = 0;
   let unchanged = 0;
 
@@ -134,6 +138,10 @@ export function mergeDoc(
         line: i + 1,
         message: `${directive.raw}: ${(err as Error).message}`,
       });
+      // Invariant: snippet is null iff extraction failed. tidy() may have
+      // already assigned [] before the throw — reset, or the null guard below
+      // lets an empty snippet erase the existing fence.
+      snippet = null;
     }
 
     const fence = findFence(lines, i + 1);
@@ -150,8 +158,9 @@ export function mergeDoc(
     const lang = directive.lang ?? inferLang(directive.path);
 
     if (fence === null) {
-      out.push(...renderFence(snippet, indent, "`", lang));
+      for (const l of renderFence(snippet, indent, "`", lang)) out.push(l);
       updated++;
+      updatedLines.push(directive.line);
       i++;
       continue;
     }
@@ -159,12 +168,22 @@ export function mergeDoc(
     // Preserve blank lines between directive and fence, and the author's own
     // info string (highlight ranges, titles) when present.
     for (let j = i + 1; j < fence.openIndex; j++) out.push(lines[j] ?? "");
-    const info = fence.info !== "" ? fence.info : lang;
+    // An explicit lang= replaces the fence's language token but keeps any
+    // metadata tail (highlight ranges, titles); otherwise the author's info
+    // string wins and lang only fills an empty one.
+    let info = fence.info === "" ? lang : fence.info;
+    if (directive.lang && fence.info !== "") {
+      info = directive.lang + fence.info.replace(/^\S+/, "");
+    }
     const rendered = renderFence(snippet, fence.indent, fence.char, info);
     const existing = lines.slice(fence.openIndex, fence.closeIndex + 1);
-    if (existing.join("\n") === rendered.join("\n")) unchanged++;
-    else updated++;
-    out.push(...rendered);
+    if (existing.join("\n") === rendered.join("\n")) {
+      unchanged++;
+    } else {
+      updated++;
+      updatedLines.push(directive.line);
+    }
+    for (const l of rendered) out.push(l);
     i = fence.closeIndex + 1;
   }
 
@@ -173,6 +192,7 @@ export function mergeDoc(
     file,
     updated,
     unchanged,
+    updatedLines,
     problems,
     content: newContent !== content ? newContent : undefined,
   };

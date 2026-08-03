@@ -4,8 +4,15 @@ import type { Directive } from "./types.js";
 //   <!-- sotto ts:src/checkout.ts#purchase -->        (markdown)
 //   {/* sotto ts:src/checkout.ts#purchase */}          (MDX)
 // followed by a code fence that sottovoce owns.
-const HTML_DIRECTIVE = /^(\s*)<!--\s*sotto\s+(.+?)\s*-->\s*$/;
-const MDX_DIRECTIVE = /^(\s*)\{\/\*\s*sotto\s+(.+?)\s*\*\/\}\s*$/;
+// The body capture must start AND end on non-whitespace — a lazy (.+?) here
+// competes with the following \s* over trailing-space runs and goes quadratic.
+const HTML_DIRECTIVE = /^(\s*)<!--\s*sotto\s+(\S(?:.*\S)?)\s*-->\s*$/;
+const MDX_DIRECTIVE = /^(\s*)\{\/\*\s*sotto\s+(\S(?:.*\S)?)\s*\*\/\}\s*$/;
+
+/** Cheap shape test — true for any line that starts like a sotto directive. */
+export function isDirectiveLine(line: string): boolean {
+  return /^\s*(?:<!--|\{\/\*)\s*sotto\s/.test(line);
+}
 
 export interface DirectiveMatch {
   directive: Directive;
@@ -54,6 +61,11 @@ export function parseDirectiveBody(body: string, lineNo: number): Directive {
     const value = eq >= 0 ? token.slice(eq + 1) : "";
     switch (key) {
       case "lines": {
+        if (directive.region) {
+          throw new DirectiveError(
+            "lines= cannot be combined with a #region selector",
+          );
+        }
         const m = /^(\d+)(?:-(\d+))?$/.exec(value);
         if (!m || !m[1]) {
           throw new DirectiveError(`bad lines option "${token}" (want lines=4-9)`);
@@ -71,6 +83,11 @@ export function parseDirectiveBody(body: string, lineNo: number): Directive {
         directive.lang = value;
         break;
       default:
+        if (eq < 0) {
+          throw new DirectiveError(
+            `unexpected token "${token}" — paths and region names cannot contain spaces; options look like key=value`,
+          );
+        }
         throw new DirectiveError(`unknown option "${token}"`);
     }
   }
