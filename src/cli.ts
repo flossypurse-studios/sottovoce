@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { createRequire } from "node:module";
 import { findConfig, loadConfig } from "./config.js";
-import { runSync } from "./run.js";
+import type { ListEntry } from "./list.js";
+import { runList, runSync } from "./run.js";
 
 const pkg = createRequire(import.meta.url)("../package.json") as {
   version: string;
@@ -12,14 +13,16 @@ const HELP = `sottovoce — sync real, tested code from source repos into your d
 Usage:
   sottovoce sync [options]    extract snippets and rewrite docs code fences (default command)
   sottovoce check [options]   like sync, but write nothing; exit 1 on drift
+  sottovoce list [options]    inventory every directive in the docs tree (parse-only, no network)
 
-Both commands exit 1 when any directive is broken (missing file, missing
-region, unknown source).
+sync and check exit 1 when any directive is broken (missing file, missing
+region, unknown source). list always exits 0 — it reports, check enforces.
 
 Options:
   --config <file>   path to sottovoce.json (default: nearest, walking up from cwd)
   --offline         use cached repo clones, no network
   --check           same as the check command
+  --json            with list: emit the inventory as a JSON array
   --version         print the sottovoce version
   --help            show this help
 
@@ -40,12 +43,69 @@ function fail(message: string): never {
   process.exit(1);
 }
 
+function formatEntry(e: ListEntry): string {
+  let ref = `${e.source}:${e.path}`;
+  if (e.region) ref += `#${e.region}`;
+  const parts = [ref];
+  if (e.lines) {
+    parts.push(
+      `lines=${e.lines.start === e.lines.end ? e.lines.start : `${e.lines.start}-${e.lines.end}`}`,
+    );
+  }
+  if (e.lang) parts.push(`lang=${e.lang}`);
+  if (!e.sourceKnown) parts.push("[UNKNOWN SOURCE]");
+  if (!e.hasFence) parts.push("[NO FENCE]");
+  return `  ${e.line}: ${parts.join(" ")}`;
+}
+
+/** Print the directive inventory. Reports, never enforces — always exits 0. */
+async function list(
+  loaded: ReturnType<typeof loadConfig>,
+  json: boolean,
+): Promise<void> {
+  const summary = await runList(loaded);
+  if (json) {
+    console.log(JSON.stringify([...summary.entries, ...summary.invalid], null, 2));
+    return;
+  }
+  if (summary.files === 0) {
+    console.error(
+      `sottovoce: no files matched docs globs (${loaded.config.docs.join(", ")})`,
+    );
+    return;
+  }
+  if (summary.entries.length === 0 && summary.invalid.length === 0) {
+    console.error(
+      `sottovoce: no sotto directives found (scanned ${summary.files} file${summary.files === 1 ? "" : "s"} matching ${loaded.config.docs.join(", ")})`,
+    );
+    return;
+  }
+  const rows = [
+    ...summary.entries.map((e) => ({ file: e.file, line: e.line, text: formatEntry(e) })),
+    ...summary.invalid.map((inv) => ({
+      file: inv.file,
+      line: inv.line,
+      text: `  ${inv.line}: [INVALID: ${inv.error}]`,
+    })),
+  ].sort((a, b) => (a.file < b.file ? -1 : a.file > b.file ? 1 : a.line - b.line));
+  let current: string | undefined;
+  for (const row of rows) {
+    if (row.file !== current) {
+      if (current !== undefined) console.log("");
+      current = row.file;
+      console.log(row.file);
+    }
+    console.log(row.text);
+  }
+}
+
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   let command: string | undefined;
   let configPath: string | undefined;
   let offline = false;
   let checkFlag = false;
+  let json = false;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i] ?? "";
@@ -65,6 +125,8 @@ async function main(): Promise<void> {
       if (!configPath) fail("--config expects a file path");
     } else if (arg === "--offline") {
       offline = true;
+    } else if (arg === "--json") {
+      json = true;
     } else if (arg === "--check") {
       checkFlag = true;
     } else if (!arg.startsWith("-") && !command) {
@@ -75,14 +137,22 @@ async function main(): Promise<void> {
   }
 
   command = command ?? "sync";
-  if (command !== "sync" && command !== "check") {
+  if (command !== "sync" && command !== "check" && command !== "list") {
     fail(`unknown command "${command}" (try --help)`);
+  }
+  if (json && command !== "list") {
+    fail("--json is only valid with the list command");
   }
   const check = command === "check" || checkFlag;
 
   const file = configPath ?? findConfig(process.cwd());
   if (!file) fail("no sottovoce.json found (run from your docs repo, or pass --config)");
   const loaded = loadConfig(file);
+
+  if (command === "list") {
+    await list(loaded, json);
+    return;
+  }
 
   const summary = await runSync(loaded, { check, offline });
 

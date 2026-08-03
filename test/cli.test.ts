@@ -99,6 +99,44 @@ test("docs globs matching no files is reported with the globs", () => {
   assert.match(r.stderr, /no files matched docs globs \(docs\/\*\*\/\*\.\{md,mdx\}\)/);
 });
 
+test("list prints a grouped inventory and always exits 0", () => {
+  const { docsRepo } = makeFixture();
+  writeFileSync(
+    path.join(docsRepo, "docs", "guide.md"),
+    [
+      "<!-- sotto ts:src/hello.ts#hello -->",
+      "```ts",
+      "```",
+      "",
+      "<!-- sotto rust:src/main.rs -->",
+      "",
+      "<!-- sotto nonsense -->",
+      "",
+    ].join("\n"),
+  );
+  const r = runCli(docsRepo, "list");
+  assert.equal(r.code, 0);
+  assert.match(r.stdout, /^docs\/guide\.md\n/);
+  assert.match(r.stdout, /  1: ts:src\/hello\.ts#hello\n/);
+  assert.match(r.stdout, /  5: rust:src\/main\.rs \[UNKNOWN SOURCE\] \[NO FENCE\]\n/);
+  assert.match(r.stdout, /  7: \[INVALID: /);
+
+  const j = runCli(docsRepo, "list", "--json");
+  assert.equal(j.code, 0);
+  const parsed = JSON.parse(j.stdout) as Array<Record<string, unknown>>;
+  assert.equal(parsed.length, 3);
+  assert.equal(parsed[0]!.sourceKnown, true);
+  assert.equal(parsed[0]!.hasFence, true);
+  assert.equal(parsed[1]!.sourceKnown, false);
+});
+
+test("--json outside list is rejected", () => {
+  const { docsRepo } = makeFixture();
+  const r = runCli(docsRepo, "check", "--json");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /--json is only valid with the list command/);
+});
+
 test("HTML comment directives in .mdx files warn on stderr", () => {
   const { docsRepo } = makeFixture();
   writeFileSync(

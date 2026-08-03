@@ -11,9 +11,9 @@ import type { Directive, FileResult, SnippetProblem } from "./types.js";
 
 export type SnippetReader = (directive: Directive) => string;
 
-const FENCE_OPEN = /^(\s*)(`{3,}|~{3,})(.*)$/;
+export const FENCE_OPEN = /^(\s*)(`{3,}|~{3,})(.*)$/;
 
-interface Fence {
+export interface Fence {
   openIndex: number;
   closeIndex: number;
   indent: string;
@@ -21,7 +21,7 @@ interface Fence {
   info: string;
 }
 
-function findFence(lines: string[], from: number): Fence | null | "unclosed" {
+export function findFence(lines: string[], from: number): Fence | null | "unclosed" {
   let i = from;
   while (i < lines.length && (lines[i] ?? "").trim() === "") i++;
   const open = i < lines.length ? FENCE_OPEN.exec(lines[i] ?? "") : null;

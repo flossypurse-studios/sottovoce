@@ -2,9 +2,45 @@ import fg from "fast-glob";
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { LoadedConfig } from "./config.js";
+import { listDoc } from "./list.js";
+import type { ListEntry, ListInvalid } from "./list.js";
 import { mergeDoc } from "./merge.js";
 import { readSourceFile, resolveSource, SourceError } from "./sources.js";
 import type { Directive, FileResult, SnippetProblem } from "./types.js";
+
+async function globDocs(loaded: LoadedConfig): Promise<string[]> {
+  const files = await fg(loaded.config.docs, {
+    cwd: loaded.dir,
+    absolute: true,
+    dot: false,
+    onlyFiles: true,
+  });
+  files.sort();
+  return files;
+}
+
+export interface ListSummary {
+  entries: ListEntry[];
+  invalid: ListInvalid[];
+  /** Number of docs files scanned. */
+  files: number;
+}
+
+/** Inventory every directive the docs globs can see. Parse-only — no source
+ * resolution, no network. */
+export async function runList(loaded: LoadedConfig): Promise<ListSummary> {
+  const docFiles = await globDocs(loaded);
+  const known = new Set(Object.keys(loaded.config.sources));
+  const entries: ListEntry[] = [];
+  const invalid: ListInvalid[] = [];
+  for (const abs of docFiles) {
+    const rel = path.relative(loaded.dir, abs);
+    const result = listDoc(rel, readFileSync(abs, "utf8"), known);
+    entries.push(...result.entries);
+    invalid.push(...result.invalid);
+  }
+  return { entries, invalid, files: docFiles.length };
+}
 
 export interface SyncOptions {
   /** Report drift without writing (CI mode). */
@@ -30,13 +66,7 @@ export async function runSync(
 ): Promise<SyncSummary> {
   const { config, dir } = loaded;
 
-  const docFiles = await fg(config.docs, {
-    cwd: dir,
-    absolute: true,
-    dot: false,
-    onlyFiles: true,
-  });
-  docFiles.sort();
+  const docFiles = await globDocs(loaded);
 
   // Sources resolve lazily so a config can list repos that this docs tree
   // doesn't reference yet without paying for a fetch.
