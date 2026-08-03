@@ -35,9 +35,10 @@ Docs reference snippets with a single comment directive followed by a code fence
   (sottovoce keeps this fence in sync)
   \`\`\`
 
-Directive form: <source>:<path>[#region] [lines=A-B] [lang=x]
+Directive form: <source>:<path>[#region[+region...]] [lines=A-B] [lang=x]
 Sources are named in sottovoce.json — a GitHub repo pinned to a ref, or a local path.
 Regions use editor-native markers in the source file: // #region name ... // #endregion
+A + composes several regions from the same file, joined by blank lines in order.
 `;
 
 function fail(message: string): never {

@@ -50,6 +50,45 @@ export function extractRegion(sourceText: string, region: string): string[] {
   throw new ExtractError(`region "${region}" is never closed (#endregion missing)`);
 }
 
+/**
+ * Extract a region selector, which may compose several regions from the same
+ * file with `+` (`#imports+workflow`). Each region is extracted and tidied on
+ * its own — dedented to its own shallowest line, blank edges trimmed — and
+ * segments are joined with exactly one blank line, in selector order.
+ */
+export function extractRegions(sourceText: string, selector: string): string[] {
+  const names = selector.split("+");
+  const seen = new Set<string>();
+  for (const name of names) {
+    if (name === "") {
+      throw new ExtractError(`empty region name in "#${selector}"`);
+    }
+    if (seen.has(name)) {
+      throw new ExtractError(`duplicate region "${name}" in "#${selector}"`);
+    }
+    seen.add(name);
+  }
+
+  // Try every region before failing so one message reports all the misses.
+  const errors: string[] = [];
+  const segments: string[][] = [];
+  for (const name of names) {
+    try {
+      segments.push(tidy(extractRegion(sourceText, name)));
+    } catch (err) {
+      errors.push((err as Error).message);
+    }
+  }
+  if (errors.length) throw new ExtractError(errors.join("; "));
+
+  const out: string[] = [];
+  for (const segment of segments) {
+    if (out.length && segment.length) out.push("");
+    for (const line of segment) out.push(line);
+  }
+  return out;
+}
+
 export function extractLines(
   sourceText: string,
   range: { start: number; end: number },

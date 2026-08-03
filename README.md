@@ -69,7 +69,15 @@ const receipt = await checkout(cart);
 <!-- sotto local:src/checkout.ts#purchase -->
 ```
 
-Any common comment leader works (`//`, `#`, `--`, `;`, `'`, `%`, `/* */`, `<!-- -->`), plus bare `#region` for C#. Regions can nest. Marker lines never appear in output — they are stripped from every extraction mode, including whole-file, so don't put meaning in them. A **line range** is the escape hatch for code you can't annotate (fragile by nature — an upstream edit shifts the lines, so prefer regions in files you control):
+Any common comment leader works (`//`, `#`, `--`, `;`, `'`, `%`, `/* */`, `<!-- -->`), plus bare `#region` for C#. Regions can nest. Marker lines never appear in output — they are stripped from every extraction mode, including whole-file, so don't put meaning in them.
+
+**Multiple regions** from the same file compose with `+`, so a page can show imports and a function while skipping the code between them:
+
+```markdown
+<!-- sotto local:src/checkout.ts#imports+purchase -->
+```
+
+Each region is extracted and dedented on its own; segments are joined with exactly one blank line, in the order written. If any named region is missing, all missing names are reported in one error and the fence is left untouched. Because `+` is the separator, region names themselves can't contain it. A **line range** is the escape hatch for code you can't annotate (fragile by nature — an upstream edit shifts the lines, so prefer regions in files you control):
 
 ```markdown
 <!-- sotto local:package.json lines=1-5 -->

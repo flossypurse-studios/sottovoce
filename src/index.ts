@@ -1,6 +1,7 @@
 export { matchDirective, parseDirectiveBody, DirectiveError } from "./directive.js";
 export {
   extractRegion,
+  extractRegions,
   extractLines,
   wholeFile,
   tidy,

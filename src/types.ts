@@ -4,7 +4,7 @@ export interface Directive {
   source: string;
   /** Path of the snippet file, relative to the source root. */
   path: string;
-  /** Optional `#region` name within the file. */
+  /** Optional `#region` selector: a region name, or several joined with `+`. */
   region?: string;
   /** Optional 1-based inclusive line range, e.g. `lines=4-9` or `lines=4`. */
   lines?: { start: number; end: number };
