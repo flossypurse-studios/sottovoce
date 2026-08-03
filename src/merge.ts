@@ -7,7 +7,7 @@ import {
   tidy,
   wholeFile,
 } from "./extract.js";
-import type { Directive, FileResult, SnippetProblem } from "./types.js";
+import type { Directive, FenceDrift, FileResult, SnippetProblem } from "./types.js";
 
 export type SnippetReader = (directive: Directive) => string;
 
@@ -83,6 +83,7 @@ export function mergeDoc(
   const problems: SnippetProblem[] = [];
   const warnings: SnippetProblem[] = [];
   const updatedLines: number[] = [];
+  const drifts: FenceDrift[] = [];
   let updated = 0;
   let unchanged = 0;
   let directives = 0;
@@ -172,9 +173,15 @@ export function mergeDoc(
     const lang = directive.lang ?? inferLang(directive.path);
 
     if (fence === null) {
-      for (const l of renderFence(snippet, indent, "`", lang)) out.push(l);
+      const rendered = renderFence(snippet, indent, "`", lang);
+      for (const l of rendered) out.push(l);
       updated++;
       updatedLines.push(directive.line);
+      drifts.push({
+        line: directive.line,
+        expected: rendered.slice(1, -1),
+        actual: [],
+      });
       i++;
       continue;
     }
@@ -196,6 +203,11 @@ export function mergeDoc(
     } else {
       updated++;
       updatedLines.push(directive.line);
+      drifts.push({
+        line: directive.line,
+        expected: rendered.slice(1, -1),
+        actual: existing.slice(1, -1),
+      });
     }
     for (const l of rendered) out.push(l);
     i = fence.closeIndex + 1;
@@ -208,6 +220,7 @@ export function mergeDoc(
     unchanged,
     directives,
     updatedLines,
+    drifts,
     problems,
     warnings,
     content: newContent !== content ? newContent : undefined,
