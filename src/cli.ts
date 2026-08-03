@@ -86,14 +86,32 @@ async function main(): Promise<void> {
 
   const summary = await runSync(loaded, { check, offline });
 
+  for (const w of summary.warnings) {
+    console.error(`warning: ${w.file}:${w.line}: ${w.message}`);
+  }
   for (const p of summary.problems) {
     console.error(`${p.file}${p.line > 0 ? `:${p.line}` : ""}: ${p.message}`);
   }
 
+  const count = (n: number, word: string): string =>
+    `${n} ${word}${n === 1 ? "" : "s"}`;
   const scanned = summary.files.length;
+  const globs = loaded.config.docs.join(", ");
+  // A run with nothing to do is more often a mistake (bad glob, mis-placed
+  // docs) than intent — say so instead of printing an all-zero summary.
   if (scanned === 0) {
-    console.error("sottovoce: warning: docs globs matched no files");
+    console.error(`sottovoce: no files matched docs globs (${globs})`);
+    return;
   }
+  const directives = summary.files.reduce((n, f) => n + f.directives, 0);
+  if (directives === 0) {
+    console.error(
+      `sottovoce: no sotto directives found (scanned ${count(scanned, "file")} matching ${globs})`,
+    );
+    return;
+  }
+
+  const snippets = summary.updated + summary.unchanged;
   const changed = summary.files.filter((f) =>
     summary.changedFiles.includes(f.file),
   );
@@ -103,17 +121,17 @@ async function main(): Promise<void> {
       for (const line of f.updatedLines) console.log(`drift: ${f.file}:${line}`);
     }
     console.log(
-      `checked ${scanned} file${scanned === 1 ? "" : "s"}: ` +
+      `checked ${count(snippets, "snippet")} across ${count(scanned, "file")}: ` +
         `${summary.unchanged} in sync, ${summary.updated} stale`,
     );
     if (summary.problems.length || summary.changedFiles.length) process.exit(1);
   } else {
     for (const f of changed) console.log(`wrote ${f.file}`);
     console.log(
-      `synced ${scanned} file${scanned === 1 ? "" : "s"}: ` +
+      `synced ${count(snippets, "snippet")} across ${count(scanned, "file")}: ` +
         `${summary.updated} updated, ${summary.unchanged} unchanged` +
         (summary.changedFiles.length
-          ? ` (${summary.changedFiles.length} file${summary.changedFiles.length === 1 ? "" : "s"} written)`
+          ? ` (${count(summary.changedFiles.length, "file")} written)`
           : ""),
     );
     if (summary.problems.length) process.exit(1);

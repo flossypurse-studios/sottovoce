@@ -18,17 +18,24 @@ export interface DirectiveMatch {
   directive: Directive;
   /** Leading whitespace of the directive line. */
   indent: string;
+  /** Which comment form the directive used. */
+  form: "html" | "mdx";
 }
 
 export class DirectiveError extends Error {}
 
 /** Parse a single docs line. Returns null if it is not a sotto directive. */
 export function matchDirective(docLine: string, lineNo: number): DirectiveMatch | null {
-  const m = HTML_DIRECTIVE.exec(docLine) ?? MDX_DIRECTIVE.exec(docLine);
+  const html = HTML_DIRECTIVE.exec(docLine);
+  const m = html ?? MDX_DIRECTIVE.exec(docLine);
   if (!m) return null;
   const indent = m[1] ?? "";
   const body = m[2] ?? "";
-  return { directive: parseDirectiveBody(body, lineNo), indent };
+  return {
+    directive: parseDirectiveBody(body, lineNo),
+    indent,
+    form: html ? "html" : "mdx",
+  };
 }
 
 export function parseDirectiveBody(body: string, lineNo: number): Directive {
