@@ -48,6 +48,16 @@ test("rejects lines= combined with a region selector", () => {
     () => parseDirectiveBody("ts:app.ts#setup lines=2-4", 1),
     /cannot be combined/,
   );
+  // The composite form is a region selector too.
+  assert.throws(
+    () => parseDirectiveBody("ts:app.ts#setup+teardown lines=2-4", 1),
+    /cannot be combined/,
+  );
+});
+
+test("composite region selectors parse as a single raw selector", () => {
+  const d = parseDirectiveBody("ts:app.ts#imports+use", 1);
+  assert.equal(d.region, "imports+use");
 });
 
 test("space in a region name points at the real constraint", () => {

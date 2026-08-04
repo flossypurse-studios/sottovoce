@@ -237,6 +237,62 @@ test("records directive lines for rewritten fences", () => {
   assert.deepEqual(result.updatedLines, [3]);
 });
 
+const MULTI_SOURCE = [
+  "// #region imports",
+  "import { hello } from './hello.js';",
+  "// #endregion",
+  "",
+  "const unrelated = true;",
+  "",
+  "// #region use",
+  "  console.log(hello());",
+  "// #endregion",
+].join("\n");
+
+const multiReader = (d: Directive) => {
+  if (d.path === "multi.ts") return MULTI_SOURCE;
+  return reader(d);
+};
+
+test("multi-region directives compose and sync idempotently", () => {
+  const doc = ["<!-- sotto ts:multi.ts#imports+use -->", "```ts", "```", ""].join("\n");
+  const first = mergeDoc("doc.md", doc, multiReader);
+  assert.deepEqual(first.problems, []);
+  assert.equal(
+    first.content,
+    [
+      "<!-- sotto ts:multi.ts#imports+use -->",
+      "```ts",
+      "import { hello } from './hello.js';",
+      "",
+      "console.log(hello());",
+      "```",
+      "",
+    ].join("\n"),
+  );
+  // Second pass: byte-identical.
+  const second = mergeDoc("doc.md", first.content!, multiReader);
+  assert.equal(second.content, undefined);
+  assert.equal(second.unchanged, 1);
+});
+
+test("a multi-region directive with any missing region leaves the fence untouched", () => {
+  const doc = [
+    "<!-- sotto ts:multi.ts#imports+nope+also -->",
+    "```ts",
+    "keep me",
+    "```",
+    "",
+  ].join("\n");
+  const result = mergeDoc("doc.md", doc, multiReader);
+  assert.equal(result.content, undefined);
+  assert.equal(result.problems.length, 1);
+  assert.match(
+    result.problems[0]!.message,
+    /region "nope" not found; region "also" not found/,
+  );
+});
+
 test("exposes expected and actual fence bodies for drifted fences", () => {
   const doc = [
     "<!-- sotto ts:hello.ts#hello -->",

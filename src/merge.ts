@@ -2,7 +2,7 @@ import { isDirectiveLine, matchDirective } from "./directive.js";
 import {
   ExtractError,
   extractLines,
-  extractRegion,
+  extractRegions,
   inferLang,
   tidy,
   wholeFile,
@@ -140,7 +140,7 @@ export function mergeDoc(
     let snippet: string[] | null = null;
     try {
       const text = readSnippet(directive);
-      if (directive.region) snippet = extractRegion(text, directive.region);
+      if (directive.region) snippet = extractRegions(text, directive.region);
       else if (directive.lines) snippet = extractLines(text, directive.lines);
       else snippet = wholeFile(text);
       snippet = tidy(snippet);
