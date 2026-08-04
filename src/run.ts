@@ -21,6 +21,7 @@ export interface SyncSummary {
   /** Files whose content changed (written unless check mode). */
   changedFiles: string[];
   problems: SnippetProblem[];
+  warnings: SnippetProblem[];
 }
 
 export async function runSync(
@@ -94,5 +95,6 @@ export async function runSync(
     unchanged: files.reduce((n, f) => n + f.unchanged, 0),
     changedFiles,
     problems: files.flatMap((f) => f.problems),
+    warnings: files.flatMap((f) => f.warnings),
   };
 }

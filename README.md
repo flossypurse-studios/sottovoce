@@ -37,7 +37,7 @@ Reference a snippet in any markdown or MDX file — a directive comment followed
 <!-- sotto local:src/checkout.ts#purchase -->
 ```
 
-In MDX, use `{/* sotto local:src/checkout.ts#purchase */}`.
+In MDX, use `{/* sotto local:src/checkout.ts#purchase */}`. An HTML-style `<!-- -->` directive in an `.mdx` file still syncs, but prints a warning — MDX builds fail on HTML comments.
 
 Then run:
 
@@ -75,7 +75,7 @@ Any common comment leader works (`//`, `#`, `--`, `;`, `'`, `%`, `/* */`, `<!-- 
 <!-- sotto local:package.json lines=1-5 -->
 ```
 
-Options: `lines=A-B` (or `lines=N` for a single line) and `lang=x`. Combining `lines=` with a `#region` selector is an error. The fence language is inferred from the file extension; `lang=x` replaces it, and if your fence carries extra metadata (`ts {3-5} title="checkout.ts"`), everything after the language token is preserved.
+Options: `lines=A-B` (or `lines=N` for a single line) and `lang=x`. Combining `lines=` with a `#region` selector is an error. When sottovoce inserts a new fence (or fills one whose info string is empty), the fence language is inferred from the file extension. An existing fence's info string is otherwise preserved untouched, including its language token; `lang=x` replaces the language token, and if your fence carries extra metadata (`ts {3-5} title="checkout.ts"`), everything after the language token is preserved.
 
 Snippets are dedented to their shallowest line, blank edges are trimmed, and fences widen automatically when a snippet contains backtick runs. Tilde fences work too. Snippets inside lists inherit the fence's indentation.
 

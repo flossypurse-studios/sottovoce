@@ -44,9 +44,13 @@ export interface FileResult {
   file: string;
   updated: number;
   unchanged: number;
+  /** Count of sotto directive lines seen, including malformed ones. */
+  directives: number;
   /** Directive lines (1-based) whose fences were rewritten or inserted. */
   updatedLines: number[];
   problems: SnippetProblem[];
+  /** Non-fatal advisories, e.g. an HTML comment directive in an .mdx file. */
+  warnings: SnippetProblem[];
   /** New file content, if any fence changed. */
   content?: string;
 }

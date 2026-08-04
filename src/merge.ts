@@ -81,9 +81,11 @@ export function mergeDoc(
 
   const out: string[] = [];
   const problems: SnippetProblem[] = [];
+  const warnings: SnippetProblem[] = [];
   const updatedLines: number[] = [];
   let updated = 0;
   let unchanged = 0;
+  let directives = 0;
 
   let i = 0;
   while (i < lines.length) {
@@ -92,6 +94,9 @@ export function mergeDoc(
     try {
       match = matchDirective(line, i + 1);
     } catch (err) {
+      // The line matched the directive shape but its body didn't parse — it
+      // still counts as a directive for you-have-work detection.
+      directives++;
       problems.push({ file, line: i + 1, message: (err as Error).message });
       out.push(line);
       i++;
@@ -120,7 +125,16 @@ export function mergeDoc(
     }
 
     out.push(line);
-    const { directive, indent } = match;
+    directives++;
+    const { directive, indent, form } = match;
+    if (form === "html" && file.toLowerCase().endsWith(".mdx")) {
+      warnings.push({
+        file,
+        line: i + 1,
+        message:
+          "HTML comment directive in .mdx — use {/* sotto ... */} (MDX fails on <!-- -->)",
+      });
+    }
 
     let snippet: string[] | null = null;
     try {
@@ -192,8 +206,10 @@ export function mergeDoc(
     file,
     updated,
     unchanged,
+    directives,
     updatedLines,
     problems,
+    warnings,
     content: newContent !== content ? newContent : undefined,
   };
 }

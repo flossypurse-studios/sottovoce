@@ -237,6 +237,53 @@ test("records directive lines for rewritten fences", () => {
   assert.deepEqual(result.updatedLines, [3]);
 });
 
+test("an existing fence's language token is preserved, not re-inferred", () => {
+  // hello.ts would infer `ts` — the author's `typescript` token must survive.
+  const doc = ["<!-- sotto ts:hello.ts#hello -->", "```typescript", "stale", "```", ""].join("\n");
+  const result = mergeDoc("doc.md", doc, reader);
+  assert.equal(result.updated, 1);
+  assert.ok(result.content?.includes("```typescript\nexport function hello()"));
+});
+
+test("warns on an HTML comment directive in an .mdx file, syncing it anyway", () => {
+  const doc = ["<!-- sotto ts:hello.ts#hello -->", "```ts", "```", ""].join("\n");
+  const result = mergeDoc("doc.mdx", doc, reader);
+  assert.equal(result.warnings.length, 1);
+  assert.equal(result.warnings[0]!.line, 1);
+  assert.match(result.warnings[0]!.message, /HTML comment directive in \.mdx/);
+  assert.equal(result.updated, 1);
+  assert.deepEqual(result.problems, []);
+});
+
+test("no .mdx warning for MDX-form directives or for .md files", () => {
+  const mdx = mergeDoc(
+    "doc.mdx",
+    ["{/* sotto ts:hello.ts#hello */}", "```ts", "```", ""].join("\n"),
+    reader,
+  );
+  assert.deepEqual(mdx.warnings, []);
+  const md = mergeDoc(
+    "doc.md",
+    ["<!-- sotto ts:hello.ts#hello -->", "```ts", "```", ""].join("\n"),
+    reader,
+  );
+  assert.deepEqual(md.warnings, []);
+});
+
+test("counts directive lines, including malformed ones", () => {
+  const doc = [
+    "<!-- sotto ts:hello.ts#hello -->",
+    "```ts",
+    "```",
+    "",
+    "<!-- sotto nonsense -->",
+    "no directives in plain text",
+  ].join("\n");
+  const result = mergeDoc("doc.md", doc, reader);
+  assert.equal(result.directives, 2);
+  assert.equal(result.problems.length, 1);
+});
+
 test("directives with trailing spaces inside the comment still parse", () => {
   const doc = ["<!-- sotto ts:hello.ts#hello    -->", "```ts", "```", ""].join("\n");
   const result = mergeDoc("doc.md", doc, reader);
