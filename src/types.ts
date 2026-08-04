@@ -40,6 +40,16 @@ export interface SnippetProblem {
   message: string;
 }
 
+/** Expected-vs-current fence bodies for one drifted directive. */
+export interface FenceDrift {
+  /** Directive line (1-based) — matches the entry in `updatedLines`. */
+  line: number;
+  /** Fence body sottovoce would write. */
+  expected: string[];
+  /** Fence body currently in the docs; empty when no fence exists yet. */
+  actual: string[];
+}
+
 export interface FileResult {
   file: string;
   updated: number;
@@ -48,6 +58,8 @@ export interface FileResult {
   directives: number;
   /** Directive lines (1-based) whose fences were rewritten or inserted. */
   updatedLines: number[];
+  /** Expected/current fence bodies for each entry in `updatedLines`. */
+  drifts: FenceDrift[];
   problems: SnippetProblem[];
   /** Non-fatal advisories, e.g. an HTML comment directive in an .mdx file. */
   warnings: SnippetProblem[];

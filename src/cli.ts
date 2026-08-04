@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { createRequire } from "node:module";
 import { findConfig, loadConfig } from "./config.js";
+import { diffLines } from "./diff.js";
 import type { ListEntry } from "./list.js";
 import { runList, runSync } from "./run.js";
 
@@ -22,6 +23,7 @@ Options:
   --config <file>   path to sottovoce.json (default: nearest, walking up from cwd)
   --offline         use cached repo clones, no network
   --check           same as the check command
+  --diff            with check: print what changed under each drift line
   --json            with list: emit the inventory as a JSON array
   --version         print the sottovoce version
   --help            show this help
@@ -106,6 +108,7 @@ async function main(): Promise<void> {
   let offline = false;
   let checkFlag = false;
   let json = false;
+  let diff = false;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i] ?? "";
@@ -127,6 +130,8 @@ async function main(): Promise<void> {
       offline = true;
     } else if (arg === "--json") {
       json = true;
+    } else if (arg === "--diff") {
+      diff = true;
     } else if (arg === "--check") {
       checkFlag = true;
     } else if (!arg.startsWith("-") && !command) {
@@ -144,6 +149,9 @@ async function main(): Promise<void> {
     fail("--json is only valid with the list command");
   }
   const check = command === "check" || checkFlag;
+  if (diff && !check) {
+    fail("--diff is only valid with the check command");
+  }
 
   const file = configPath ?? findConfig(process.cwd());
   if (!file) fail("no sottovoce.json found (run from your docs repo, or pass --config)");
@@ -188,7 +196,17 @@ async function main(): Promise<void> {
   if (check) {
     for (const f of changed) {
       if (f.updatedLines.length === 0) console.log(`drift: ${f.file}`);
-      for (const line of f.updatedLines) console.log(`drift: ${f.file}:${line}`);
+      const driftByLine = new Map(f.drifts.map((d) => [d.line, d]));
+      for (const line of f.updatedLines) {
+        console.log(`drift: ${f.file}:${line}`);
+        const d = diff ? driftByLine.get(line) : undefined;
+        if (d) {
+          // Two-space prefix keeps the diff visually subordinate to drift lines.
+          for (const op of diffLines(d.actual, d.expected)) {
+            console.log(`  ${op.kind} ${op.text}`.trimEnd());
+          }
+        }
+      }
     }
     console.log(
       `checked ${count(snippets, "snippet")} across ${count(scanned, "file")}: ` +

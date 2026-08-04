@@ -108,7 +108,7 @@ Prints every directive the docs globs can see, grouped by file — one line per 
 npx sottovoce check
 ```
 
-Exits non-zero if any fence is stale or any directive is broken (missing file, missing region, unknown source). Stale fences print as `drift: docs/guide.md:12`, broken directives as `docs/guide.md:12: <directive>: <what's wrong>` — both point at the directive line. Wire it into the docs repo's CI and snippet drift becomes a failing build instead of a silent lie:
+Exits non-zero if any fence is stale or any directive is broken (missing file, missing region, unknown source). Stale fences print as `drift: docs/guide.md:12`, broken directives as `docs/guide.md:12: <directive>: <what's wrong>` — both point at the directive line. `check --diff` additionally prints what changed under each `drift:` line: `-` lines are what the fence holds, `+` lines are what the source now says. Wire it into the docs repo's CI and snippet drift becomes a failing build instead of a silent lie:
 
 ```yaml
 - run: npx sottovoce check

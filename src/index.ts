@@ -9,6 +9,8 @@ export {
 } from "./extract.js";
 export { mergeDoc } from "./merge.js";
 export type { SnippetReader } from "./merge.js";
+export { diffLines } from "./diff.js";
+export type { DiffOp } from "./diff.js";
 export { listDoc } from "./list.js";
 export type { ListEntry, ListInvalid, ListResult } from "./list.js";
 export { resolveSource, readSourceFile, SourceError } from "./sources.js";
@@ -16,6 +18,7 @@ export { findConfig, loadConfig, ConfigError, CONFIG_NAME } from "./config.js";
 export type {
   Config,
   Directive,
+  FenceDrift,
   FileResult,
   SnippetProblem,
   SourceSpec,

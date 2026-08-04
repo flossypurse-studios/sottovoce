@@ -99,6 +99,35 @@ test("docs globs matching no files is reported with the globs", () => {
   assert.match(r.stderr, /no files matched docs globs \(docs\/\*\*\/\*\.\{md,mdx\}\)/);
 });
 
+test("check --diff prints a subordinate diff under each drift line", () => {
+  const { docsRepo } = makeFixture();
+  writeFileSync(
+    path.join(docsRepo, "docs", "guide.md"),
+    [
+      "<!-- sotto ts:src/hello.ts#hello -->",
+      "```ts",
+      "export const hi = 2;",
+      "```",
+      "",
+    ].join("\n"),
+  );
+  const r = runCli(docsRepo, "check", "--diff");
+  assert.equal(r.code, 1);
+  assert.match(
+    r.stdout,
+    /drift: docs\/guide\.md:1\n  - export const hi = 2;\n  \+ export const hi = 1;\n/,
+  );
+
+  // Default check output carries no diff lines.
+  const plain = runCli(docsRepo, "check");
+  assert.ok(!plain.stdout.includes("  - "));
+  assert.ok(!plain.stdout.includes("  + "));
+
+  const bad = runCli(docsRepo, "sync", "--diff");
+  assert.equal(bad.code, 1);
+  assert.match(bad.stderr, /--diff is only valid with the check command/);
+});
+
 test("list prints a grouped inventory and always exits 0", () => {
   const { docsRepo } = makeFixture();
   writeFileSync(

@@ -237,6 +237,34 @@ test("records directive lines for rewritten fences", () => {
   assert.deepEqual(result.updatedLines, [3]);
 });
 
+test("exposes expected and actual fence bodies for drifted fences", () => {
+  const doc = [
+    "<!-- sotto ts:hello.ts#hello -->",
+    "```ts",
+    "stale line",
+    "```",
+    "",
+  ].join("\n");
+  const result = mergeDoc("doc.md", doc, reader);
+  assert.deepEqual(result.drifts, [
+    {
+      line: 1,
+      expected: ["export function hello() {", '  return "hi";', "}"],
+      actual: ["stale line"],
+    },
+  ]);
+});
+
+test("an inserted fence reports empty actual and no drift when in sync", () => {
+  const inserted = mergeDoc("doc.md", "<!-- sotto ts:hello.ts#hello -->\n", reader);
+  assert.equal(inserted.drifts.length, 1);
+  assert.deepEqual(inserted.drifts[0]!.actual, []);
+  assert.ok(inserted.drifts[0]!.expected.length > 0);
+
+  const inSync = mergeDoc("doc.md", inserted.content!, reader);
+  assert.deepEqual(inSync.drifts, []);
+});
+
 test("an existing fence's language token is preserved, not re-inferred", () => {
   // hello.ts would infer `ts` — the author's `typescript` token must survive.
   const doc = ["<!-- sotto ts:hello.ts#hello -->", "```typescript", "stale", "```", ""].join("\n");
