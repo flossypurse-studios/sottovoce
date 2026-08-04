@@ -1,6 +1,6 @@
 {
   "name": "sottovoce",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Sync real, tested code from source repos into your docs — quietly.",
   "keywords": [
     "docs",
