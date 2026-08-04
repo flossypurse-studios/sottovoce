@@ -92,6 +92,16 @@ Each named source is either a GitHub repo pinned to a ref, or a local path:
 
 Pin `ref` to the release tag your docs describe — that's what keeps a docs version honest. Branches, tags, and full commit SHAs all work; if omitted, `ref` defaults to `main`. Only GitHub repos are supported as remote sources — for anything else, clone it yourself and use a `path` source. Repos are shallow-fetched into `~/.cache/sottovoce/` (respects `$XDG_CACHE_HOME`); `--offline` reuses the cache without touching the network. Private repos work through your ambient git credentials.
 
+## Auditing coverage
+
+```sh
+npx sottovoce list
+```
+
+Prints every directive the docs globs can see, grouped by file — one line per directive with its line number, reference, and options. Directives whose source name isn't in `sottovoce.json` are flagged `[UNKNOWN SOURCE]`; directives with no code fence beneath them yet are flagged `[NO FENCE]`; directive lines that fail to parse show as `[INVALID: ...]`. This is a parse-only audit — no network, no source resolution — so it works offline and fast, and it always exits 0. Enforcement is `check`'s job.
+
+`--json` emits the same inventory as a JSON array of `{file, line, source, path, region, lines, lang, sourceKnown, hasFence}` objects (unparseable directive lines appear as `{file, line, error}`).
+
 ## CI: the drift alarm
 
 ```sh

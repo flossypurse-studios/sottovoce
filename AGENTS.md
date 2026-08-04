@@ -13,9 +13,10 @@ TypeScript (strict, ESM, NodeNext), Node >= 20. One runtime dependency: `fast-gl
 | `src/directive.ts` | Parse `sotto` directive comments in docs files |
 | `src/extract.ts` | Region/line-range extraction, dedent, language inference |
 | `src/merge.ts` | Rewrite docs fences (pure — no I/O) |
+| `src/list.ts` | Directive inventory for the `list` command (pure — no I/O) |
 | `src/sources.ts` | Resolve sources: local paths, shallow-fetched repo cache |
 | `src/run.ts` | Glob docs, wire sources to merge, write files |
-| `src/cli.ts` | `sync` / `check` commands |
+| `src/cli.ts` | `sync` / `check` / `list` commands |
 
 ## Build and test
 
