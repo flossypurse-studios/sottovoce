@@ -1,7 +1,8 @@
 {
   "name": "sottovoce",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Sync real, tested code from source repos into your docs — quietly.",
+  "homepage": "https://sottovoce.tools",
   "keywords": [
     "docs",
     "documentation",

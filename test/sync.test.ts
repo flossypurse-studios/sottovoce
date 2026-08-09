@@ -135,7 +135,7 @@ test("symlinks cannot pull files from outside the source root", async () => {
   assert.ok(!leak.includes("SECRET"));
 });
 
-test("an unwritable file is reported and does not abandon later files", async () => {
+test("an unwritable file is reported and does not abandon later files", { skip: process.getuid?.() === 0 }, async () => {
   const { docsRepo } = makeFixture();
   writeFileSync(
     path.join(docsRepo, "docs", "aaa.md"),

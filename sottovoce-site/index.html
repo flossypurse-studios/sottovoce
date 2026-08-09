@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>sottovoce — keep your docs' code in sync, quietly</title>
+<meta name="description" content="sottovoce syncs real, tested code from source repos into your docs and keeps them in sync — the smallest possible footprint in both the source and the docs.">
+<link rel="canonical" href="https://sottovoce.tools/">
+<meta property="og:title" content="sottovoce — keep your docs' code in sync, quietly">
+<meta property="og:description" content="Sync real, tested code from source repos into your docs. One comment line per snippet. Drift becomes a failing build.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://sottovoce.tools/">
+<style>
+  :root {
+    --bg: #faf9f6; --panel: #f2f0ea; --border: #e2dfd6; --fg: #2b2a27;
+    --muted: #6f6c64; --accent: #4a6b57; --red: #a4453b; --blue: #3a5a7a;
+    --code-bg: #1c1b18; --code-fg: #e8e6df; --code-muted: #8f8d84;
+    --code-green: #9cc4a5; --code-red: #d99a92; --code-key: #a6c1dc;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg); color: var(--fg); line-height: 1.65;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  code, pre { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+  .wrap { max-width: 800px; margin: 0 auto; padding: 0 24px; }
+  header { text-align: center; padding: 84px 24px 36px; }
+  .logo { font-size: 1.05rem; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 14px; font-variant: small-caps; }
+  h1 { font-size: 2.3rem; line-height: 1.2; letter-spacing: -0.5px; margin-bottom: 18px; font-weight: 600; }
+  h1 .hl { color: var(--accent); }
+  .tagline { font-size: 1.15rem; color: var(--muted); max-width: 600px; margin: 0 auto 28px; }
+  .badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 28px; }
+  .badges img { height: 20px; }
+  .cta { display: inline-flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .btn {
+    display: inline-block; padding: 10px 20px; border-radius: 8px; text-decoration: none;
+    font-weight: 600; font-size: 0.95rem; border: 1px solid var(--border);
+  }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.ghost { color: var(--fg); background: var(--panel); }
+  .btn:hover { opacity: 0.9; }
+
+  .term {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 12px;
+    margin: 8px auto 0; overflow: hidden; text-align: left; max-width: 660px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+  }
+  .term .bar { background: #26241f; padding: 10px 14px; border-bottom: 1px solid #3a382f; }
+  .term .bar span { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; }
+  .dot-r { background: #d99a92; } .dot-y { background: #d9c58f; } .dot-g { background: #9cc4a5; }
+  .term pre { padding: 18px 20px; font-size: 0.88rem; line-height: 1.7; overflow-x: auto; white-space: pre; color: var(--code-fg); }
+  .c-cmd { color: var(--code-fg); } .c-red { color: var(--code-red); } .c-muted { color: var(--code-muted); }
+  .c-key { color: var(--code-key); } .c-green { color: var(--code-green); }
+
+  section { padding: 48px 0; border-top: 1px solid var(--border); }
+  h2 { font-size: 1.5rem; letter-spacing: -0.3px; margin-bottom: 16px; font-weight: 600; }
+  h3 { font-size: 1.05rem; margin: 24px 0 8px; }
+  p { color: var(--fg); margin-bottom: 14px; }
+  p.muted { color: var(--muted); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 8px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; }
+  .card h3 { margin-top: 0; color: var(--accent); }
+  .card p { color: var(--muted); margin-bottom: 0; font-size: 0.95rem; }
+  pre.block {
+    background: var(--code-bg); color: var(--code-fg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 18px; overflow-x: auto; font-size: 0.88rem; line-height: 1.6; margin: 8px 0 14px;
+  }
+  pre.block .c-comment { color: var(--code-muted); }
+  pre.block .c-str { color: var(--code-green); }
+  pre.block .c-key { color: var(--code-key); }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.93rem; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  td code { color: var(--accent); background: var(--panel); padding: 1px 6px; border-radius: 5px; white-space: nowrap; }
+  td.desc { color: var(--muted); }
+  a { color: var(--blue); }
+  .inline-code { background: var(--panel); border: 1px solid var(--border); padding: 1px 6px; border-radius: 5px; font-size: 0.9em; color: var(--accent); }
+  footer { text-align: center; padding: 40px 24px 60px; color: var(--muted); font-size: 0.9rem; border-top: 1px solid var(--border); }
+  @media (max-width: 640px) { h1 { font-size: 1.8rem; } .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="logo">sottovoce</div>
+    <h1>Your docs should quote <span class="hl">code that actually runs.</span></h1>
+    <p class="tagline">sottovoce syncs real, tested code from source repos into your docs and keeps the two in sync — with the smallest possible footprint in both.</p>
+    <div class="badges">
+      <a href="https://www.npmjs.com/package/sottovoce"><img src="https://img.shields.io/npm/v/sottovoce?color=4a6b57&label=npm" alt="npm version"></a>
+      <a href="https://github.com/flossypurse-studios/sottovoce"><img src="https://img.shields.io/badge/license-MIT-3a5a7a" alt="MIT license"></a>
+    </div>
+    <div class="cta">
+      <a class="btn primary" href="#install">Install</a>
+      <a class="btn ghost" href="https://github.com/flossypurse-studios/sottovoce">View on GitHub →</a>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="term">
+      <div class="bar"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+<pre><span class="c-muted"># one comment line marks the snippet; the fence below it is ordinary markdown</span>
+<span class="c-cmd">&lt;!-- sotto local:src/checkout.ts#purchase --&gt;</span>
+
+<span class="c-muted">$</span> <span class="c-cmd">npx sottovoce sync</span>
+<span class="c-green">✓ docs/guide.md:12  ← src/checkout.ts#purchase</span>
+
+<span class="c-muted"># run it in CI and drift stops being a silent lie</span>
+<span class="c-muted">$</span> <span class="c-cmd">npx sottovoce check</span>
+<span class="c-red">drift: docs/guide.md:12</span></pre>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<section id="why">
+  <h2>Docs code samples rot</h2>
+  <p>The example compiles the day you paste it, then the SDK moves and the docs don't. sottovoce makes your docs reference code that actually lives in a repo — ideally one your CI already builds and runs — and keeps the two in sync. Same job as marker-based snippet tools like <a href="https://github.com/temporalio/snipsync">snipsync</a>, with one design goal added: stay quiet.</p>
+  <div class="grid">
+    <div class="card">
+      <h3>Source files need no markers</h3>
+      <p>Reference a whole file, a line range, or a named region. Regions use the <code>// #region</code> / <code>// #endregion</code> markers editors already fold on — they read as ordinary code organization.</p>
+    </div>
+    <div class="card">
+      <h3>One comment line per snippet</h3>
+      <p>Not a wrapper pair. The code fence below the directive is a normal fence — sottovoce rewrites its contents in place, idempotently. Run it twice and nothing changes.</p>
+    </div>
+    <div class="card">
+      <h3>Synced code is committed</h3>
+      <p>Not fetched at build time. Docs builds stay network-free, snippet changes show up in reviewable diffs, and anything indexing your docs sees real code.</p>
+    </div>
+    <div class="card">
+      <h3>Drift is a failing build</h3>
+      <p><code>sottovoce check</code> exits non-zero if any fence is stale or any directive is broken. Wire it into CI and a stale snippet fails the build instead of shipping a lie.</p>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <h2>Install</h2>
+  <pre class="block"><span class="c-comment"># add it to the docs repo</span>
+npm install --save-dev sottovoce</pre>
+  <p class="muted">Requires Node 20+ and git on PATH.</p>
+
+  <h3>Quickstart</h3>
+  <p>Everything here runs locally — no GitHub org, no credentials. Add <code class="inline-code">sottovoce.json</code> to your docs repo, pointing a source at a directory of example code:</p>
+  <pre class="block">{
+  <span class="c-key">"docs"</span>: [<span class="c-str">"docs/**/*.{md,mdx}"</span>],
+  <span class="c-key">"sources"</span>: {
+    <span class="c-key">"local"</span>: { <span class="c-key">"path"</span>: <span class="c-str">"../examples"</span> }
+  }
+}</pre>
+  <p>Reference a snippet in any markdown or MDX file — a directive comment followed by a code fence — then run <code class="inline-code">npx sottovoce sync</code>. Every directive's fence now holds the current code from the source. Run it again and nothing changes — that's the point.</p>
+  <pre class="block"><span class="c-comment">&lt;!-- sotto local:src/checkout.ts#purchase --&gt;</span></pre>
+  <p class="muted">In MDX, use <code>{/* sotto local:src/checkout.ts#purchase */}</code> — an HTML-style comment in an <code>.mdx</code> file still syncs, but prints a warning, since MDX builds fail on HTML comments.</p>
+</section>
+
+<section id="referencing">
+  <h2>Referencing code</h2>
+  <p>The directive form is <code class="inline-code">&lt;source&gt;:&lt;path&gt;[#region] [options]</code>.</p>
+  <h3>A named region</h3>
+  <p>uses editor-native fold markers in the source file. Any common comment leader works (<code>//</code>, <code>#</code>, <code>--</code>, <code>;</code>, <code>/* */</code>, <code>&lt;!-- --&gt;</code>), plus bare <code>#region</code> for C#. Marker lines never appear in output.</p>
+  <pre class="block"><span class="c-comment">// #region purchase</span>
+<span class="c-cmd">const receipt = await checkout(cart);</span>
+<span class="c-comment">// #endregion</span></pre>
+  <p><strong>Multiple regions</strong> from one file compose with <code>+</code>, so a page can show imports and a function while skipping the code between them — each region is extracted and dedented on its own, joined with one blank line.</p>
+  <pre class="block"><span class="c-comment">&lt;!-- sotto local:src/checkout.ts#imports+purchase --&gt;</span></pre>
+  <p>A <strong>line range</strong> is the escape hatch for code you can't annotate — fragile by nature, so prefer regions in files you control. Options are <code>lines=A-B</code> and <code>lang=x</code>; snippets are dedented to their shallowest line, blank edges trimmed, and fences widen automatically around backtick runs.</p>
+</section>
+
+<section id="sources">
+  <h2>Sources</h2>
+  <p>Each named source is either a GitHub repo pinned to a ref, or a local path:</p>
+  <pre class="block">{
+  <span class="c-key">"ts"</span>:  { <span class="c-key">"repo"</span>: <span class="c-str">"your-org/examples-ts"</span>, <span class="c-key">"ref"</span>: <span class="c-str">"v1.4.0"</span> },
+  <span class="c-key">"wip"</span>: { <span class="c-key">"path"</span>: <span class="c-str">"../examples"</span> }
+}</pre>
+  <p class="muted">Pin <code>ref</code> to the release tag your docs describe — that's what keeps a docs version honest. Branches, tags, and full commit SHAs all work; if omitted, <code>ref</code> defaults to <code>main</code>. Repos are shallow-fetched into <code>~/.cache/sottovoce/</code>; <code>--offline</code> reuses the cache without touching the network. Private repos work through your ambient git credentials.</p>
+</section>
+
+<section id="commands">
+  <h2>Commands</h2>
+  <table>
+    <tr><th>Command</th><th>What it does</th></tr>
+    <tr><td><code>sottovoce sync</code></td><td class="desc">Rewrites every directive's fence with the current source code, idempotently. Inserts a fence where none exists. Exits non-zero on a broken directive, even after writing every valid fence.</td></tr>
+    <tr><td><code>sottovoce check</code></td><td class="desc">The drift alarm. Exits non-zero if any fence is stale or any directive is broken. <code>--diff</code> prints what changed under each <code>drift:</code> line.</td></tr>
+    <tr><td><code>sottovoce list</code></td><td class="desc">Prints every directive the docs globs can see, grouped by file. Flags <code>[UNKNOWN SOURCE]</code>, <code>[NO FENCE]</code>, and <code>[INVALID]</code>. Parse-only, offline, always exits 0. <code>--json</code> emits the same inventory as JSON.</td></tr>
+  </table>
+  <p class="muted" style="margin-top:16px">Broken directives never destroy content — the existing fence is left untouched and the problem is reported.</p>
+</section>
+
+</div>
+
+<footer>
+  <p>sottovoce — MIT · maintained by <a href="https://github.com/flossypurse-studios">flossy-studio</a> · <a href="https://github.com/flossypurse-studios/sottovoce">GitHub</a> · <a href="https://www.npmjs.com/package/sottovoce">npm</a></p>
+</footer>
+</body>
+</html>
