@@ -185,7 +185,7 @@ code, .mono-num { font-family: var(--font-mono); font-variant-numeric: tabular-n
 
 /* ---------- hero ---------- */
 
-.hero { padding: 3.25rem 0 var(--section-y); border-top: 0; }
+.hero { padding: 3.25rem 0 2.25rem; border-top: 0; }
 .hero .lead, .tagline {
   font-size: var(--lead); color: var(--fg-dim);
   margin: 1.5rem 0 0; max-width: var(--measure);
@@ -211,6 +211,34 @@ code, .mono-num { font-family: var(--font-mono); font-variant-numeric: tabular-n
 }
 .btn.primary:hover, .btn-primary:hover { background: var(--fg); border-color: var(--fg); color: #fff; }
 .btn.ghost { background: transparent; }
+
+/* ---------- jump row ----------
+   Two of these sites open with a dozen links to their own sections. As buttons
+   they read as a wall of equal-weight calls to action, which is a lie — there is
+   one call to action and the rest is a table of contents. Set them as mono chips
+   so the eye sorts them in one pass instead of reading thirteen decisions. */
+.jump {
+  display: flex; flex-wrap: wrap; gap: 0.4rem;
+  margin-top: 1.5rem; max-width: 46rem;
+}
+.jump a {
+  font-family: var(--font-mono);
+  font-size: var(--micro);
+  color: var(--fg-dim);
+  text-decoration: none;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 0.32rem 0.6rem;
+  background: var(--surface);
+  white-space: nowrap;
+}
+.jump a:hover { border-color: var(--accent); color: var(--accent-ink); }
+.jump-label {
+  margin: 0 0 0.6rem;
+  font-family: var(--font-mono); font-size: var(--micro);
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-mute);
+  flex-basis: 100%;
+}
 
 /* ---------- sections ---------- */
 
@@ -398,6 +426,12 @@ footer b { color: var(--fg); font-weight: 500; }
    margin note. They are held by the line colour alone. */
 .card { border-left: 1px solid var(--line); }
 .card:hover { border-color: var(--fg-mute); }
+
+/* Marigold darkened to pass on paper is an ochre, and an ochre button is a muddy
+   thing to put at the top of a page. The quiet tool gets the quiet button: ink,
+   like the studio's own default. Marigold stays a rule and never a fill. */
+.btn.primary, .btn-primary { background: var(--fg); border-color: var(--fg); color: var(--bg); }
+.btn.primary:hover, .btn-primary:hover { background: var(--accent-ink); border-color: var(--accent-ink); color: #fff; }
 
 /* One coloured element in the hero, and it is a rule, not a word. */
 .hero h1 span, h1 .hl {
