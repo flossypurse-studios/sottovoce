@@ -85,6 +85,21 @@ test("oversized cores fall back to whole-replace without losing lines", () => {
   assertReconstructs(a, b, ops);
 });
 
+test("the shared first line is trimmed as a prefix, not left for the suffix pass to find from the other end", () => {
+  // a's single line is shared with b's first and last line. A correct prefix
+  // trim consumes it going forward, leaving the appended "x" as an insert
+  // after it. An off-by-one that stops prefix trimming one line early would
+  // let the suffix trim claim it instead, flipping context and insert order.
+  const a = ["x"];
+  const b = ["x", "x"];
+  const ops = diffLines(a, b);
+  assertReconstructs(a, b, ops);
+  assert.deepEqual(ops, [
+    { kind: " ", text: "x" },
+    { kind: "+", text: "x" },
+  ]);
+});
+
 test("common prefix and suffix stay context even around a large core", () => {
   const a = ["keep1", ...Array.from({ length: 6000 }, (_, i) => `a${i}`), "keep2"];
   const b = ["keep1", ...Array.from({ length: 6000 }, (_, i) => `b${i}`), "keep2"];

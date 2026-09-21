@@ -128,6 +128,14 @@ test("tidy strips blank edges and trailing whitespace", () => {
   assert.deepEqual(tidy(["", "  a();  ", "", "  b();", ""]), ["a();", "", "b();"]);
 });
 
+test("tidy narrows the common indent to the least-indented line, not just the first", () => {
+  // The first line is indented 4 spaces; the closing brace sits at column 0.
+  // A fixed-length slice of every line by the first line's indent would chop
+  // real characters off (or empty) the brace line instead of leaving it be.
+  const lines = ["    if (x) {", "    do();", "}"];
+  assert.deepEqual(tidy(lines), ["    if (x) {", "    do();", "}"]);
+});
+
 test("infers fence language from extension", () => {
   assert.equal(inferLang("src/app.ts"), "ts");
   assert.equal(inferLang("worker.py"), "python");

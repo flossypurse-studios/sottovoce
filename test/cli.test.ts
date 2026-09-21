@@ -99,6 +99,17 @@ test("docs globs matching no files is reported with the globs", () => {
   assert.match(r.stderr, /no files matched docs globs \(docs\/\*\*\/\*\.\{md,mdx\}\)/);
 });
 
+test("sync exits 1 when a directive is broken, not just when a file changed", () => {
+  const { docsRepo } = makeFixture();
+  writeFileSync(
+    path.join(docsRepo, "docs", "guide.md"),
+    ["<!-- sotto ts:src/hello.ts#nope -->", "```ts", "```", ""].join("\n"),
+  );
+  const r = runCli(docsRepo, "sync");
+  assert.equal(r.code, 1, "a broken directive must fail sync, not just check");
+  assert.match(r.stderr, /region "nope" not found/);
+});
+
 test("check --diff prints a subordinate diff under each drift line", () => {
   const { docsRepo } = makeFixture();
   writeFileSync(

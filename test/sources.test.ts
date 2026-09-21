@@ -56,6 +56,34 @@ test("a successful fetch lands under the cache key with no temp leftovers", () =
   assert.deepEqual(readdirSync(cacheDir), ["some-owner__some-repo@v1.0.0"]);
 });
 
+test("a repo spec with extra path segments is rejected before it ever reaches the cache path join", () => {
+  const cacheDir = makeCache();
+  assert.throws(
+    () =>
+      resolveSource(
+        "ex",
+        { repo: "owner/name/../../etc", ref: "main" },
+        { configDir: tmpdir(), cacheDir },
+      ),
+    (err: unknown) =>
+      err instanceof SourceError && /repo must be "owner\/name"/.test(err.message),
+  );
+});
+
+test("--offline against an uncached source raises an actionable error instead of returning a stale or missing path", () => {
+  const cacheDir = makeCache();
+  assert.throws(
+    () =>
+      resolveSource(
+        "ex",
+        { repo: "some-owner/some-repo", ref: "main" },
+        { configDir: tmpdir(), cacheDir, offline: true },
+      ),
+    (err: unknown) =>
+      err instanceof SourceError && /no cached copy of some-owner\/some-repo@main/.test(err.message),
+  );
+});
+
 test("a failed refresh of an existing cache entry keeps the old checkout", () => {
   const cacheDir = makeCache();
   const dir = path.join(cacheDir, "some-owner__some-repo@main");
