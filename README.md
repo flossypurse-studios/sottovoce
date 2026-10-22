@@ -10,6 +10,14 @@ How it stays quiet:
 - **Docs need one comment line per snippet**, not a wrapper pair. The code fence below it is a normal fence — sottovoce rewrites its contents in place, idempotently.
 - **Synced code is committed**, not fetched at build time. Docs builds stay network-free, snippet changes show up in reviewable diffs, and anything that indexes your docs sees real code.
 
+## Similar tools
+
+- [snipsync](https://github.com/temporalio/snipsync) — marker-based snippet sync, the closest relative; see the line above for the design goal sottovoce adds on top.
+- [MarkdownSnippets](https://github.com/SimonCropp/MarkdownSnippets) — extracts snippets from code files and merges them into markdown documents.
+- [embedme](https://github.com/zakhenry/embedme) — embeds code snippets into markdown documents.
+
+sottovoce's difference is the footprint: one directive comment per snippet rather than a wrapper pair in the docs file, no markers required in the source file for whole-file or line-range references, and output committed to the docs repo rather than generated at build time.
+
 ## Install
 
 ```sh
