@@ -437,7 +437,24 @@ footer b { color: var(--fg); font-weight: 500; }
   box-shadow: inset 0 -0.14em 0 var(--accent);
 }
 </style>
-<script defer src="https://analytics.flossypurse.studio/script.js" data-website-id="247f30d0-c483-4539-9611-73ec82ad1647" data-domains="sottovoce.tools" data-exclude-search="true" data-exclude-hash="true" data-do-not-track="true"></script>
+<script>
+window.flossyKeepUtm = function (type, payload) {
+  try {
+    var allow = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
+    var u = new URL(payload.url, location.origin);
+    var kept = new URLSearchParams();
+    u.searchParams.forEach(function (v, k) {
+      if (allow.indexOf(k) !== -1) kept.append(k, v);
+    });
+    var qs = kept.toString();
+    payload.url = u.pathname + (qs ? '?' + qs : '');
+  } catch (e) {
+    try { payload.url = new URL(payload.url, location.origin).pathname; } catch (e2) {}
+  }
+  return payload;
+};
+</script>
+<script defer src="https://analytics.flossypurse.studio/script.js" data-website-id="247f30d0-c483-4539-9611-73ec82ad1647" data-domains="sottovoce.tools" data-before-send="flossyKeepUtm" data-exclude-hash="true" data-do-not-track="true"></script>
 </head>
 <body>
 <header class="site-head">
